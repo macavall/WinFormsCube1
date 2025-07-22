@@ -6,7 +6,10 @@ namespace RotatingCubeDemo
 {
     public partial class RotatingCubeForm : Form
     {
-        private float angle = 0f;
+        private float angleX = 0f;
+        private float angleY = 0f;
+        private readonly float rotationSpeed = 0.05f;
+        private bool rotateLeft, rotateRight, rotateUp, rotateDown;
         private readonly System.Windows.Forms.Timer timer;
         private readonly PictureBox pictureBox;
 
@@ -38,6 +41,9 @@ namespace RotatingCubeDemo
             this.Size = new Size(400, 400);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
+            this.KeyPreview = true; // Enable key events on form
+            this.KeyDown += RotatingCubeForm_KeyDown;
+            this.KeyUp += RotatingCubeForm_KeyUp;
 
             // Initialize PictureBox
             pictureBox = new PictureBox
@@ -57,9 +63,52 @@ namespace RotatingCubeDemo
             timer.Start();
         }
 
+        private void RotatingCubeForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.Left:
+                    rotateLeft = true;
+                    break;
+                case Keys.Right:
+                    rotateRight = true;
+                    break;
+                case Keys.Up:
+                    rotateDown = true;
+                    break;
+                case Keys.Down:
+                    rotateUp = true;
+                    break;
+            }
+        }
+
+        private void RotatingCubeForm_KeyUp(object sender, KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.Left:
+                    rotateLeft = false;
+                    break;
+                case Keys.Right:
+                    rotateRight = false;
+                    break;
+                case Keys.Up:
+                    rotateDown = false;
+                    break;
+                case Keys.Down:
+                    rotateUp = false;
+                    break;
+            }
+        }
+
         private void Timer_Tick(object sender, EventArgs e)
         {
-            angle += 0.05f; // Rotate 0.05 radians per frame
+            // Apply rotations based on key flags
+            if (rotateLeft) angleY -= rotationSpeed;
+            if (rotateRight) angleY += rotationSpeed;
+            if (rotateUp) angleX -= rotationSpeed;
+            if (rotateDown) angleX += rotationSpeed;
+
             pictureBox.Invalidate(); // Trigger redraw
         }
 
@@ -80,15 +129,25 @@ namespace RotatingCubeDemo
             PointF[] projected = new PointF[vertices.Length];
             for (int i = 0; i < vertices.Length; i++)
             {
+                // Start with original coordinates
+                float vx = vertices[i].X;
+                float vy = vertices[i].Y;
+                float vz = vertices[i].Z;
+
                 // Rotate around Y-axis
-                float x = vertices[i].X * (float)Math.Cos(angle) + vertices[i].Z * (float)Math.Sin(angle);
-                float z = -vertices[i].X * (float)Math.Sin(angle) + vertices[i].Z * (float)Math.Cos(angle);
-                float y = vertices[i].Y;
+                float tempX = vx * (float)Math.Cos(angleY) + vz * (float)Math.Sin(angleY);
+                float tempZ = -vx * (float)Math.Sin(angleY) + vz * (float)Math.Cos(angleY);
+                float tempY = vy;
+
+                // Then rotate around X-axis
+                float rotatedY = tempY * (float)Math.Cos(angleX) - tempZ * (float)Math.Sin(angleX);
+                float rotatedZ = tempY * (float)Math.Sin(angleX) + tempZ * (float)Math.Cos(angleX);
+                float rotatedX = tempX;
 
                 // Perspective projection
-                float factor = distance / (distance - z);
-                float px = x * factor * scale + centerX;
-                float py = y * factor * scale + centerY;
+                float factor = distance / (distance - rotatedZ);
+                float px = rotatedX * factor * scale + centerX;
+                float py = rotatedY * factor * scale + centerY;
                 projected[i] = new PointF(px, py);
             }
 
